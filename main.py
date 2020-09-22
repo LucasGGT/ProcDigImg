@@ -8,7 +8,7 @@ def cinza(imgCol):
     for x in range(w):
         for y in range(h):
             pxl = imgCol.getpixel((x,y))
-            # média das coordenadas RGB
+            # media das coordenadas RGB
             lum = (pxl[0] + pxl[1] + pxl[2])//3
             img.putpixel((x,y), (lum, lum, lum))
     return img
@@ -20,7 +20,7 @@ def cinza_ponderada(imgCol):
     for x in range(w):
         for y in range(h):
             pxl = imgCol.getpixel((x,y))
-            # média ponderada das coordenadas RGB
+            # media ponderada das coordenadas RGB
             lum = int(0.299*pxl[0] + 0.587*pxl[1] + 0.114*pxl[2])
             img.putpixel((x,y), (lum, lum, lum))
     return img
@@ -124,21 +124,27 @@ def dilatacao(imgCol):
     w, h = imgCol.size
     img = novaImagem(w, h)
 
-    mask = np.array([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
+    mask = np.zeros((5, 5))
+    hotspot = (2, 2)
 
-    x = 1
-    y = 1
+    for j in range(4):
+        mask[2][j] = 1
 
-    for x in range(w - 1):
-        for y in range(h - 1):
-            matPxl = matrizPixels(imgCol, x, y)
+    x, y = 2
 
-            matResult = multMatrizes(matPxl, mask)
-            soma = somaValMatriz(matResult)
+    for x in range(w - 2):
+        for y in range(h - 2):
+            pxl = imgCol.getpixel((x, y))
 
-            img.putpixel((x, y), (int(soma), int(soma), int(soma)))
+            if int(media_pixel(pxl)) == 255:
+                matPxl = matrizPixels(imgCol, x, y)
+                img = aplica_mask_dilatacao(img, mask, x, y)
+
 
     return img
+
+def media_pixel(pixel):
+    return (pixel[0] + pixel[1] + pixel[2]) / 3
 
 def novaImagem(w, h):
     img = Image.new("RGB", (w, h))
@@ -150,57 +156,64 @@ def novaImagem(w, h):
     return img  
 
 def matrizPixels(imgCol, x, y):
-    # Otimizar
+    tam = mat.shape[0]
 
-    pxl1 = imgCol.getpixel((x - 1, y - 1))
-    pxl2 = imgCol.getpixel((x, y - 1))
-    pxl3 = imgCol.getpixel((x + 1, y - 1))
-    pxl4 = imgCol.getpixel((x - 1, y))
-    pxl5 = imgCol.getpixel((x, y))
-    pxl6 = imgCol.getpixel((x + 1, y))
-    pxl7 = imgCol.getpixel((x - 1, y + 1))
-    pxl8 = imgCol.getpixel((x, y + 1))
-    pxl9 = imgCol.getpixel((x + 1, y + 1))
+    matResult = np.zeros((tam, tam))
 
-    corPxl1 = int(pxl1[0] + pxl1[1] + pxl1[2]) / 3
-    corPxl2 = int(pxl2[0] + pxl2[1] + pxl2[2]) / 3
-    corPxl3 = int(pxl3[0] + pxl3[1] + pxl3[2]) / 3
-    corPxl4 = int(pxl4[0] + pxl4[1] + pxl4[2]) / 3
-    corPxl5 = int(pxl5[0] + pxl5[1] + pxl5[2]) / 3
-    corPxl6 = int(pxl6[0] + pxl6[1] + pxl6[2]) / 3
-    corPxl7 = int(pxl7[0] + pxl7[1] + pxl7[2]) / 3
-    corPxl8 = int(pxl8[0] + pxl8[1] + pxl8[2]) / 3
-    corPxl9 = int(pxl9[0] + pxl9[1] + pxl9[2]) / 3
+    lim = (tam - 1) / 2
 
-    return np.array([[corPxl1, corPxl2, corPxl3], [corPxl4, corPxl5, corPxl6], [corPxl7, corPxl8, corPxl9]])
+    i, j = -lim 
+    
+    while i <= lim:
+        while j <= lim:
+            pxl = imgCol.getpixel((x + i, y + j))
+            corResult = (pxl[0] + pxl[1] + pxl[2]) / 3
+
+            matResult[x + i][y + j] = int(corResult)
+
+    return matResult
 
 def multMatrizes(mat1, mat2):
-    matResult = np.zeros((3, 3))
+    tam = mat1.shape[0]
 
-    for x in range(2):
-        for y in range(2):
-            a = mat1[x][y]
-            b = mat2[x][y]
-            mult = a * b
-            matResult[x][y] = mult
+    matResult = np.zeros((tam, tam))
+
+    for x in range(tam - 1):
+        for y in range(tam - 1):         
+            matResult[x][y] = mat1[x][y] * mat2[x][y]
 
     return matResult
 
 def somaValMatriz(mat):
     soma = 0
+    tam = mat.shape[0]
 
-    for x in range(3):
-        for y in range(3):
+    for x in range(tam - 1):
+        for y in range(tam - 1):
             soma += mat[x][y]
 
     return soma
+
+def aplica_mask_dilatacao(imgNova, mask, x, y):
+    tam = mask.shape[0]
+
+    lim = (tam - 1) / 2
+
+    i, j = -lim 
+    
+    while j <= lim:
+        while i <= lim:
+            if mask[i][j] == 1:
+                imgNova.putpixel((x + i, y + j), (255, 255, 255))
+
+    return imgNova
 
 if __name__ == "__main__":
     # Cinza
     #img = Image.open("imgsOriginais\\outono.jpg")
     #cinza(img).save("imgsModificadas\\paisagemCinza.jpg")
 
-    # Limiarização
+    # Limiarizacao
     #img2 = Image.open("imgsOriginais\\castelo.jpg")
     #limiarizacao(img2).save("imgsModificadas\\paisagem2Limiarizada.jpg")
 
@@ -213,7 +226,7 @@ if __name__ == "__main__":
     #img5 = Image.open("imgsOriginais\\castelo.jpg")
     #soma(img4, img5, val1=0.1).save("imgsModificadas\\imagensSomadas.jpg")
 
-    # Subtração de imagens
+    # Subtracao de imagens
     #img6 = Image.open("imgsOriginais\\ferrari1.jpg")
     #img7 = Image.open("imgsOriginais\\ferrari2.jpg")
     #subtracao(img6, img7).save("imgsModificadas\\imagensSubtraidas.jpg")
@@ -222,4 +235,6 @@ if __name__ == "__main__":
     #img8 = Image.open("imgsOriginais\\oncaPintada.jpg")
     #pontos_salientes(img8).save("imgsModificadas\\oncaPintadaSaliente.jpg")
 
-    # Dilatação
+    # Dilatacao
+    img9 = Image.open("imgsOriginais\\emojiFeliz.png")
+    dilatacao(limiarizacao(img8)).save("imgsModificadas\\emojiDilatado.png")
