@@ -120,17 +120,23 @@ def pontos_salientes(imgCol):
 
     return img
 
-def dilatacao(imgCol):
+def dilatacao(imgCol, mask = [-1]):
     w, h = imgCol.size
     img = novaImagem(w, h)
-    tam = 5
-    lim = int((tam - 1) / 2)
+    tam = 0
 
-    mask = np.zeros((tam, tam))
-    
-    for lin in range(tam):
-        for col in range(tam):
-            mask[lin][col] = 1
+    if mask[0][0] == -1:
+        tam = 5
+
+        mask = np.zeros((tam, tam))
+        
+        for lin in range(tam):
+            for col in range(tam):
+                mask[lin][col] = 1
+    else:
+        tam = mask.shape[0]
+
+    lim = int((tam - 1) / 2)
 
     x = lim
     y = lim
@@ -153,24 +159,28 @@ def dilatacao(imgCol):
 
     return img
 
-def erosao(imgCol):
+def erosao(imgCol, mask = [-1]):
     w, h = imgCol.size
     img = novaImagem(w, h)
-    tam = 9
-    lim = int((tam - 1) / 2)
-
-    matrizFull = True
-
-    mask = np.zeros((tam, tam))
+    tam = 0
     
-    if matrizFull:
-        for lin in range(tam):
-            for col in range(tam):
-                mask[lin][col] = 1
+    if mask[0][0] == -1:
+        tam = 9
+        matrizFull = True
+
+        mask = np.zeros((tam, tam))
+        
+        if matrizFull:
+            for lin in range(tam):
+                for col in range(tam):
+                    mask[lin][col] = 1
+        else:
+            for j in range(tam):
+                mask[int(tam / 2)][j] = 1
     else:
-        for j in range(tam):
-            mask[int(tam / 2)][j] = 1
-        print(mask)
+        tam = mask.shape[0]
+
+    lim = int((tam - 1) / 2)
 
     x = lim
     y = lim
@@ -191,6 +201,42 @@ def erosao(imgCol):
                     i2 += 1
 
     return img
+
+def abertura(imgCol):
+    tam = 3
+    matrizFull = False
+
+    mask = np.zeros((tam, tam))
+    
+    if matrizFull:
+        for lin in range(tam):
+            for col in range(tam):
+                mask[lin][col] = 1
+    else:
+        for j in range(tam):
+            mask[int(tam / 2)][j] = 1
+    
+    imgErosao = erosao(imgCol, mask)
+
+    return dilatacao(imgErosao, mask)
+
+def fechamento(imgCol):
+    tam = 5
+    matrizFull = True
+
+    mask = np.zeros((tam, tam))
+    
+    if matrizFull:
+        for lin in range(tam):
+            for col in range(tam):
+                mask[lin][col] = 1
+    else:
+        for j in range(tam):
+            mask[int(tam / 2)][j] = 1
+    
+    imgDilatacao = dilatacao(imgCol, mask)
+
+    return erosao(imgDilatacao, mask)
 
 def media_pixel(pixel):
     return (pixel[0] + pixel[1] + pixel[2]) / 3
@@ -297,6 +343,16 @@ if __name__ == "__main__":
     #dilatacao(img10).save("imgsModificadas\\prego2mod.PNG")
 
     # Erosao
-    img10 = Image.open("imgsOriginais\\prego2.PNG")
-    img11 = limiarizacao(img10)
-    erosao(img11).save("imgsModificadas\\prego2modEr.PNG")
+    #img11 = Image.open("imgsOriginais\\prego2.PNG")
+    #img12 = limiarizacao(img11)
+    #erosao(img12).save("imgsModificadas\\prego2modEr.PNG")
+
+    # Abertura
+    #img13 = Image.open("imgsOriginais\\prego2.PNG")
+    #img14 = limiarizacao(img13)
+    #abertura(img14).save("imgsModificadas\\prego2modAbert.PNG")
+
+    # Fechamento
+    img15 = Image.open("imgsOriginais\\prego2.PNG")
+    img16 = limiarizacao(img15)
+    fechamento(img16).save("imgsModificadas\\prego2modFec.PNG")
