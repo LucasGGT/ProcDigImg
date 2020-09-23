@@ -1,5 +1,6 @@
 from PIL import Image
 import numpy as np
+import math
 
 def cinza(imgCol):
     w, h = imgCol.size
@@ -238,8 +239,98 @@ def fechamento(imgCol):
 
     return erosao(imgDilatacao, mask)
 
+def roberts(imgCol, valLim = 125):
+    w, h = imgCol.size
+    img = novaImagem(w, h)
+    tam = 2
+
+    mask1 = np.array([[0, 1], [-1, 0]])
+    mask2 = np.array([[1, 0], [0, -1]])
+
+    for x in range(w - 1):
+        for y in range(h - 1):
+            if calcMaskRoberts(imgCol, x, y, mask1, mask2) > valLim:
+                img.putpixel((x, y), (255, 255, 255))
+
+    return img
+
+def sobel(imgCol, valLim = 125):
+    w, h = imgCol.size
+    img = novaImagem(w, h)
+    tam = 3
+    lim = int((tam - 1) / 2)
+
+    mask1 = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+    mask2 = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+
+    x = lim
+    y = lim
+
+    for x in range(w - lim):
+        for y in range(h - lim):
+            if calcMaskSobel(imgCol, x, y, mask1, mask2) > valLim:
+                img.putpixel((x, y), (255, 255, 255))
+
+    return img
+
 def media_pixel(pixel):
     return (pixel[0] + pixel[1] + pixel[2]) / 3
+
+def calcMaskRoberts(img, x, y, mask1, mask2):
+    tam = mask1.shape[0]
+
+    matResult = np.zeros((tam, tam))
+   
+    matPxl = matrizPixelsRoberts(img, x, y)
+
+    matGx = multMatrizes(mask1, matPxl)
+    matGy = multMatrizes(mask2, matPxl)
+
+    somaGx = somaValMatriz(matGx)
+    somaGy = somaValMatriz(matGy)
+
+    quadGx = somaGx * somaGx
+    quadGy = somaGy * somaGy
+
+    somaGxGy = quadGx + quadGy
+
+    grad = math.sqrt(somaGxGy)
+
+    return grad
+
+def calcMaskSobel(img, x, y, mask1, mask2):
+    tam = mask1.shape[0]
+
+    matResult = np.zeros((tam, tam))
+   
+    matPxl = matrizPixels(img, x, y, tam)
+
+    matGx = multMatrizes(mask1, matPxl)
+    matGy = multMatrizes(mask2, matPxl)
+
+    somaGx = somaValMatriz(matGx)
+    somaGy = somaValMatriz(matGy)
+
+    quadGx = somaGx * somaGx
+    quadGy = somaGy * somaGy
+
+    somaGxGy = quadGx + quadGy
+
+    grad = math.sqrt(somaGxGy)
+
+    return grad
+
+def matrizPixelsRoberts(img, x, y):
+    matResult = np.zeros((2, 2))
+
+    for i in range(2):
+        for j in range(2):
+            pxl = img.getpixel((x + i, y + j))
+            corResult = (pxl[0] + pxl[1] + pxl[2]) / 3
+
+            matResult[i][j] = int(corResult)
+
+    return matResult
 
 def todosDifZero(img, mask, x, y):
     tam = mask.shape[0]
@@ -271,21 +362,28 @@ def novaImagem(w, h):
 def matrizPixels(imgCol, x, y, tam):
     matResult = np.zeros((tam, tam))
 
-    lim = (tam - 1) / 2
+    lim = int((tam - 1) / 2)
 
-    i = int(-lim) 
-    j = int(-lim) 
+    i = -lim 
+    j = -lim
     
+    i2 = 0
+    j2 = 0
+
     while i <= lim:
         while j <= lim:
-
             pxl = imgCol.getpixel((x + i, y + j))
             corResult = (pxl[0] + pxl[1] + pxl[2]) / 3
 
-            matResult[x + i][y + j] = int(corResult)
+            matResult[i2][j2] = int(corResult)
             j += 1
-        j = 0
+            j2 += 1
+
+        j = -lim
+        j2 = 0
+
         i += 1
+        i2 += 1
 
     return matResult
 
@@ -294,8 +392,8 @@ def multMatrizes(mat1, mat2):
 
     matResult = np.zeros((tam, tam))
 
-    for x in range(tam - 1):
-        for y in range(tam - 1):         
+    for x in range(tam):
+        for y in range(tam):         
             matResult[x][y] = mat1[x][y] * mat2[x][y]
 
     return matResult
@@ -304,8 +402,8 @@ def somaValMatriz(mat):
     soma = 0
     tam = mat.shape[0]
 
-    for x in range(tam - 1):
-        for y in range(tam - 1):
+    for x in range(tam):
+        for y in range(tam):
             soma += mat[x][y]
 
     return soma
@@ -316,8 +414,8 @@ if __name__ == "__main__":
     #cinza(img).save("imgsModificadas\\paisagemCinza.jpg")
 
     # Limiarizacao
-    #img2 = Image.open("imgsOriginais\\castelo.jpg")
-    #limiarizacao(img2).save("imgsModificadas\\paisagem2Limiarizada.jpg")
+    #img2 = Image.open("imgsOriginais/castelo.jpg")
+    #limiarizacao(img2).save("imgsModificadas/casteloLimiarizada.jpg")
 
     # Negativo
     #img3 = Image.open("imgsOriginais\\rioDeJaneiro.jpg")
@@ -353,6 +451,18 @@ if __name__ == "__main__":
     #abertura(img14).save("imgsModificadas\\prego2modAbert.PNG")
 
     # Fechamento
-    img15 = Image.open("imgsOriginais\\prego2.PNG")
-    img16 = limiarizacao(img15)
-    fechamento(img16).save("imgsModificadas\\prego2modFec.PNG")
+    #img15 = Image.open('imgsOriginais/prego2.PNG')
+    #img16 = limiarizacao(img15)
+    #fechamento(img16).save("imgsModificadas/prego2modFec.PNG")
+
+    # Roberts
+    #img17 = Image.open('imgsOriginais/castelo.jpg')
+    #img18 = limiarizacao(img17)
+    #roberts(img17).save("imgsModificadas/casteloRober.jpg")
+
+    # Sobel
+    #img19 = Image.open('imgsOriginais/prego2.PNG')
+    #img18 = limiarizacao(img17)
+    #sobel(img19).save("imgsModificadas/prego2Sobel.PNG")
+
+    # Robinson
