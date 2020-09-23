@@ -111,7 +111,7 @@ def pontos_salientes(imgCol):
 
     for x in range(w - 1):
         for y in range(h - 1):
-            matPxl = matrizPixels(imgCol, x, y)
+            matPxl = matrizPixels(imgCol, x, y, 3)
 
             matResult = multMatrizes(matPxl, mask)
             soma = somaValMatriz(matResult)
@@ -123,28 +123,95 @@ def pontos_salientes(imgCol):
 def dilatacao(imgCol):
     w, h = imgCol.size
     img = novaImagem(w, h)
+    tam = 5
+    lim = int((tam - 1) / 2)
 
-    mask = np.zeros((5, 5))
-    hotspot = (2, 2)
+    mask = np.zeros((tam, tam))
+    
+    for lin in range(tam):
+        for col in range(tam):
+            mask[lin][col] = 1
 
-    for j in range(4):
-        mask[2][j] = 1
+    x = lim
+    y = lim
 
-    x, y = 2
-
-    for x in range(w - 2):
-        for y in range(h - 2):
+    for x in range(w - lim):
+        for y in range(h - lim):
             pxl = imgCol.getpixel((x, y))
+            #matResulRep = matPxlRep(pxl, 5)
 
-            if int(media_pixel(pxl)) == 255:
-                matPxl = matrizPixels(imgCol, x, y)
-                img = aplica_mask_dilatacao(img, mask, x, y)
+            if int(media_pixel(pxl)) != 0:
+                i2 = -lim
+                j2 = -lim
+                for i in range(tam):
+                    for j in range(tam):
+                        if mask[i][j] == 1:
+                            img.putpixel((x + i2, y + j2), pxl)
+                        j2 += 1
+                    j2 = -lim
+                    i2 += 1
 
+    return img
+
+def erosao(imgCol):
+    w, h = imgCol.size
+    img = novaImagem(w, h)
+    tam = 9
+    lim = int((tam - 1) / 2)
+
+    matrizFull = True
+
+    mask = np.zeros((tam, tam))
+    
+    if matrizFull:
+        for lin in range(tam):
+            for col in range(tam):
+                mask[lin][col] = 1
+    else:
+        for j in range(tam):
+            mask[int(tam / 2)][j] = 1
+        print(mask)
+
+    x = lim
+    y = lim
+
+    for x in range(w - lim):
+        for y in range(h - lim):
+            if todosDifZero(imgCol, mask, x, y):
+                i2 = -lim
+                j2 = -lim
+                for i in range(tam):
+                    for j in range(tam):
+                        if i != j:
+                            img.putpixel((x + i2, y + j2), (0, 0, 0))
+                        else:
+                            img.putpixel((x + i2, y + j2), (255, 255, 255))
+                        j2 += 1
+                    j2 = -lim
+                    i2 += 1
 
     return img
 
 def media_pixel(pixel):
     return (pixel[0] + pixel[1] + pixel[2]) / 3
+
+def todosDifZero(img, mask, x, y):
+    tam = mask.shape[0]
+    lim = int((tam - 1) / 2)
+
+    i2 = -lim
+    j2 = -lim
+    for i in range(tam):
+        for j in range(tam):
+            if mask[i][j] == 1:
+                pxl = img.getpixel((x + i2, y + j2))
+                if int(media_pixel(pxl)) == 0:
+                    return False
+            j2 += 1
+        j2 = -lim
+        i2 += 1
+    
+    return True
 
 def novaImagem(w, h):
     img = Image.new("RGB", (w, h))
@@ -155,21 +222,24 @@ def novaImagem(w, h):
 
     return img  
 
-def matrizPixels(imgCol, x, y):
-    tam = mat.shape[0]
-
+def matrizPixels(imgCol, x, y, tam):
     matResult = np.zeros((tam, tam))
 
     lim = (tam - 1) / 2
 
-    i, j = -lim 
+    i = int(-lim) 
+    j = int(-lim) 
     
     while i <= lim:
         while j <= lim:
+
             pxl = imgCol.getpixel((x + i, y + j))
             corResult = (pxl[0] + pxl[1] + pxl[2]) / 3
 
             matResult[x + i][y + j] = int(corResult)
+            j += 1
+        j = 0
+        i += 1
 
     return matResult
 
@@ -193,20 +263,6 @@ def somaValMatriz(mat):
             soma += mat[x][y]
 
     return soma
-
-def aplica_mask_dilatacao(imgNova, mask, x, y):
-    tam = mask.shape[0]
-
-    lim = (tam - 1) / 2
-
-    i, j = -lim 
-    
-    while j <= lim:
-        while i <= lim:
-            if mask[i][j] == 1:
-                imgNova.putpixel((x + i, y + j), (255, 255, 255))
-
-    return imgNova
 
 if __name__ == "__main__":
     # Cinza
@@ -236,5 +292,11 @@ if __name__ == "__main__":
     #pontos_salientes(img8).save("imgsModificadas\\oncaPintadaSaliente.jpg")
 
     # Dilatacao
-    img9 = Image.open("imgsOriginais\\emojiFeliz.png")
-    dilatacao(limiarizacao(img8)).save("imgsModificadas\\emojiDilatado.png")
+    #img9 = Image.open("imgsOriginais\\prego2.PNG")
+    #img10 = limiarizacao(img9)
+    #dilatacao(img10).save("imgsModificadas\\prego2mod.PNG")
+
+    # Erosao
+    img10 = Image.open("imgsOriginais\\prego2.PNG")
+    img11 = limiarizacao(img10)
+    erosao(img11).save("imgsModificadas\\prego2modEr.PNG")
