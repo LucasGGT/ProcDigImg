@@ -1,6 +1,20 @@
 from PIL import Image
 import numpy as np
 import math
+import os
+
+def limpar():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+def show_horizontal(im1, im2):
+    im = Image.fromarray(np.hstack((np.array(im1), np.array(im2))))
+    im.show()
+    return im
+
+def show_vertical(im1, im2):
+    im = Image.fromarray(np.vstack((np.array(im1), np.array(im2))))
+    im.show()
+    return im
 
 def cinza(imgCol):
     w, h = imgCol.size
@@ -121,7 +135,7 @@ def pontos_salientes(imgCol):
 
     return img
 
-def dilatacao(imgCol, mask = [-1]):
+def dilatacao(imgCol, mask = [[-1]]):
     w, h = imgCol.size
     img = novaImagem(w, h)
     tam = 0
@@ -160,7 +174,7 @@ def dilatacao(imgCol, mask = [-1]):
 
     return img
 
-def erosao(imgCol, mask = [-1]):
+def erosao(imgCol, mask = [[-1]]):
     w, h = imgCol.size
     img = novaImagem(w, h)
     tam = 0
@@ -242,7 +256,6 @@ def fechamento(imgCol):
 def roberts(imgCol, valLim = 125):
     w, h = imgCol.size
     img = novaImagem(w, h)
-    tam = 2
 
     mask1 = np.array([[0, 1], [-1, 0]])
     mask2 = np.array([[1, 0], [0, -1]])
@@ -273,14 +286,38 @@ def sobel(imgCol, valLim = 125):
 
     return img
 
+def robinson(imgCol, valLim = 125):
+    w, h = imgCol.size
+    img = novaImagem(w, h)
+    tam = 3
+    lim = int((tam - 1) / 2)
+
+    mask1 = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]])
+    mask2 = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]])
+    mask3 = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+    mask4 = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
+
+    mask5 = np.array([[2, 1, 0], [1, 0, -1], [0, -1, -2]])
+    mask6 = np.array([[0, -1, -2], [1, 0, -1], [2, 1, 0]])
+    mask7 = np.array([[0, 1, 2], [-1, 0, 1], [-2, -1, 0]])
+    mask8 = np.array([[-2, -1, 0], [-1, 0, 1], [0, 1, 2]])
+
+    listMasks = [mask1, mask2, mask3, mask4, mask5, mask6, mask7, mask8]
+
+    x = lim
+    y = lim
+
+    for x in range(w - lim):
+        for y in range(h - lim):
+            if calcMaskRobinson(imgCol, x, y, listMasks) > valLim:
+                img.putpixel((x, y), (255, 255, 255))
+
+    return img
+
 def media_pixel(pixel):
     return (pixel[0] + pixel[1] + pixel[2]) / 3
 
 def calcMaskRoberts(img, x, y, mask1, mask2):
-    tam = mask1.shape[0]
-
-    matResult = np.zeros((tam, tam))
-   
     matPxl = matrizPixelsRoberts(img, x, y)
 
     matGx = multMatrizes(mask1, matPxl)
@@ -300,8 +337,6 @@ def calcMaskRoberts(img, x, y, mask1, mask2):
 
 def calcMaskSobel(img, x, y, mask1, mask2):
     tam = mask1.shape[0]
-
-    matResult = np.zeros((tam, tam))
    
     matPxl = matrizPixels(img, x, y, tam)
 
@@ -319,6 +354,35 @@ def calcMaskSobel(img, x, y, mask1, mask2):
     grad = math.sqrt(somaGxGy)
 
     return grad
+
+def calcMaskRobinson(img, x, y, listMask):
+    tam = listMask[0].shape[0]
+   
+    matPxl = matrizPixels(img, x, y, tam)
+
+    listMatMult = [0, 0, 0, 0, 0, 0, 0, 0]
+
+    for i in range(8):
+        listMatMult[i] = multMatrizes(listMask[i], matPxl)
+
+    listMatSoma = [0, 0, 0, 0, 0, 0, 0, 0]
+
+    for i in range(8):
+        listMatSoma[i] = somaValMatriz(listMatMult[i])
+
+    listMatQuad = [0, 0, 0, 0, 0, 0, 0, 0]
+
+    for i in range(8):
+        listMatQuad[i] = listMatSoma[i] * listMatSoma[i] 
+
+    somaTotal = 0
+
+    for i in range(8):
+        somaTotal += listMatQuad[i]
+
+    gradTotal = math.sqrt(somaTotal)
+
+    return gradTotal
 
 def matrizPixelsRoberts(img, x, y):
     matResult = np.zeros((2, 2))
@@ -409,6 +473,107 @@ def somaValMatriz(mat):
     return soma
 
 if __name__ == "__main__":
+
+    sair = True
+
+    while not sair:
+        print('Escolha\n')
+        print(' 1 - Cinza\n2 - Cinza ponderado\n3 - Limiarização')
+        print(' 4 - Negativo\n5 - Soma\n6 - Subtração')
+        print(' 7 - Pontos Salientes\n8 - Dilatação\n9 - Erosão')
+        print(' 10 - Abertura\n11 - Fechamento\n12 - Roberts')
+        print(' 13 - Sobel\n14 - Robinson\n15 - Sair')
+
+        opcao = input('\nOpção: ')
+        limpar()
+
+        if opcao == '1':
+            imgOri = Image.open("imgsOriginais\\outono.jpg")
+            imgMod = cinza(imgOri)
+            imgMod.save("imgsModificadas\\paisagemCinza.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '2':
+            imgOri = Image.open("imgsOriginais\\outono.jpg")
+            imgMod = cinza_ponderada(imgOri)
+            imgMod.save("imgsModificadas\\paisagemCinzaPon.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '3':
+            imgOri = Image.open("imgsOriginais\\ferrari1.jpg")
+            imgMod = limiarizacao(imgOri)
+            imgMod.save("imgsModificadas\\ferrariModLim.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '4':
+            imgOri = Image.open("imgsOriginais\\rioDeJaneiro.jpg")
+            imgMod = negativa(imgOri)
+            imgMod.save("imgsModificadas\\rioNegativo.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '5':
+            imgOri1 = Image.open("imgsOriginais\\outono.jpg")
+            imgOri2 = Image.open("imgsOriginais\\rioDeJaneiro.jpg")
+            imgMod = soma(imgOri1, imgOri2)
+            imgMod.save("imgsModificadas\\somaImgs.jpg")
+            #imgExt = show_vertical(imgOri1, imgOri2)
+            #show_horizontal(imgExt, imgMod)
+        elif opcao == '6':
+            imgOri1 = Image.open("imgsOriginais\\ferrari1.jpg")
+            imgOri2 = Image.open("imgsOriginais\\ferrari2.jpg")
+            imgMod = subtracao(imgOri1, imgOri2)
+            imgMod.save("imgsModificadas\\ferrarisSub.jpg")
+            #show_horizontal(show_vertical(imgOri1, imgOri2), imgMod)
+        elif opcao == '7':
+            imgOri = Image.open("imgsOriginais\\oncaPintada.jpg")
+            imgMod = pontos_salientes(imgOri)
+            imgMod.save("imgsModificadas\\oncaSaliente.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '8':
+            imgOri = Image.open("imgsOriginais\\prego2.PNG")
+            imgMod = dilatacao(limiarizacao(imgOri))
+            imgMod.save("imgsModificadas\\prego2Dil.PNG")
+            #show_horizontal(imgOri, imgMod)
+        elif opcao == '9':
+            imgOri = Image.open("imgsOriginais\\prego2.PNG")
+            imgMod = erosao(limiarizacao(imgOri))
+            imgMod.save("imgsModificadas\\prego2Ero.PNG")
+            #show_horizontal(imgOri, imgMod)
+        elif opcao == '10':
+            imgOri = Image.open("imgsOriginais\\prego2.PNG")
+            imgMod = abertura(imgOri)
+            imgMod.save("imgsModificadas\\prego2Abert.PNG")
+            #show_horizontal(imgOri, imgMod)
+        elif opcao == '11':
+            imgOri = Image.open("imgsOriginais\\prego2.PNG")
+            imgMod = fechamento(imgOri)
+            imgMod.save("imgsModificadas\\prego2Fech.PNG")
+            #show_horizontal(imgOri, imgMod)
+        elif opcao == '12':
+            imgOri = Image.open("imgsOriginais\\castelo.jpg")
+            imgMod = roberts(imgOri)
+            imgMod.save("imgsModificadas\\casteloRober.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '13':
+            imgOri = Image.open("imgsOriginais\\castelo.jpg")
+            imgMod = sobel(imgOri)
+            imgMod.save("imgsModificadas\\casteloSobel.jpg")
+            show_horizontal(imgOri, imgMod)
+        elif opcao == '14':
+            imgOri = Image.open("imgsOriginais\\prego2.PNG")
+            imgMod = robinson(imgOri)
+            imgMod.save("imgsModificadas\\prego2Robin.PNG")
+            show_horizontal(imgOri, imgMod)
+        else:
+            sair = True
+
+    #end while
+
+
+
+    imgOri = Image.open("imgsOriginais\\newYork.jpg")
+    imgOri1 = Image.open("imgsOriginais\\oncaPintada.jpg")
+    imgMod = roberts(imgOri1)
+    imgMod.save("imgsModificadas\\oncaPintadaaaa.jpg")
+
+
+
     # Cinza
     #img = Image.open("imgsOriginais\\outono.jpg")
     #cinza(img).save("imgsModificadas\\paisagemCinza.jpg")
@@ -466,3 +631,6 @@ if __name__ == "__main__":
     #sobel(img19).save("imgsModificadas/prego2Sobel.PNG")
 
     # Robinson
+    #img20 = Image.open('imgsOriginais/castelo.jpg')
+    #img18 = limiarizacao(img17)
+    #robinson(img20).save("imgsModificadas/casteloRobin.jpg")
